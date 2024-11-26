@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bella Clínica Estética - Cadastro de Funcionários</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9ff;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #ffc1e3;
+            color: #00796b;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 24px;
+        }
+        .container {
+            margin: 20px auto;
+            max-width: 800px;
+            text-align: center;
+        }
+        .btn {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-add {
+            background-color: #ff7bb1;
+            color: #00796b;
+        }
+        .btn-edit {
+            background-color: #4cbed6;
+            color: #00796b;
+        }
+        .btn-delete {
+            background-color: #ff6b6b;
+            color: #00796b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #ffc1e3;
+            color: #00796b;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 400px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .modal-header {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ff7bb1;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .modal-footer {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        Bella Clínica Estética 
+        <br> 
+        Funcionários
+    </div>
+    <div class="container">
+        <button class="btn btn-add" onclick="openModal()">Adicionar Funcionário</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Telefone</th>
+                    <th>Endereço</th>
+                    <th>Cargo</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="employee-table">
+                <!-- Os funcionários serão adicionados dinamicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h3 class="modal-header">Cadastrar Funcionário</h3>
+            <div class="form-group">
+                <label for="name">Nome</label>
+                <input type="text" id="name" placeholder="Digite o nome">
+            </div>
+            <div class="form-group">
+                <label for="cpf">CPF</label>
+                <input type="text" id="cpf" placeholder="Digite o CPF">
+            </div>
+            <div class="form-group">
+                <label for="phone">Telefone</label>
+                <input type="text" id="phone" placeholder="Digite o telefone">
+            </div>
+            <div class="form-group">
+                <label for="address">Endereço</label>
+                <input type="text" id="address" placeholder="Digite o endereço">
+            </div>
+            <div class="form-group">
+                <label for="role">Cargo</label>
+                <input type="text" id="role" placeholder="Digite o cargo">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-add" onclick="addEmployee()">Salvar</button>
+                <button class="btn btn-delete" onclick="closeModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('modal');
+        const employeeTable = document.getElementById('employee-table');
+        let currentEmployeeId = null; // Usado para rastrear qual funcionário está sendo editado
+        
+        const API_URL = 'http://127.0.0.1:8000/api/funcionarios/'; // URL da API
+        const TOKEN = 'a2876b5903f94c6932392172bbcb06339da2c8f9'; // Substitua pelo token do superuser ou do usuário autenticado
+        
+        // Abrir o modal
+        function openModal(employee = null) {
+            modal.style.display = 'flex';
+            if (employee) {
+                // Preencher os campos com os dados do funcionário para edição
+                document.getElementById('name').value = employee.nome;
+                document.getElementById('cpf').value = employee.cpf;
+                document.getElementById('phone').value = employee.telefone;
+                document.getElementById('address').value = employee.endereco;
+                document.getElementById('role').value = employee.cargo;
+                currentEmployeeId = employee.id; // Definir o ID do funcionário que está sendo editado
+            } else {
+                // Limpar os campos para um novo funcionário
+                document.getElementById('name').value = '';
+                document.getElementById('cpf').value = '';
+                document.getElementById('phone').value = '';
+                document.getElementById('address').value = '';
+                document.getElementById('role').value = '';
+                currentEmployeeId = null;
+            }
+        }
+        
+        // Fechar o modal
+        function closeModal() {
+            modal.style.display = 'none';
+            currentEmployeeId = null; // Limpar o ID após fechar o modal
+        }
+        
+        // Adicionar um novo funcionário
+        function addEmployee() {
+            const name = document.getElementById('name').value;
+            const cpf = document.getElementById('cpf').value;
+            const phone = document.getElementById('phone').value;
+            const address = document.getElementById('address').value;
+            const role = document.getElementById('role').value;
+        
+            const method = currentEmployeeId ? 'PUT' : 'POST'; // Se tiver ID, é edição
+            const url = currentEmployeeId ? `${API_URL}${currentEmployeeId}/` : API_URL;
+        
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Authorization': `Token ${TOKEN}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nome: name,
+                    cpf: cpf,
+                    telefone: phone,
+                    endereco: address,
+                    cargo: role,
+                }),
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+                    return response.json();
+                })
+                .then(funcionario => {
+                    if (currentEmployeeId) {
+                        // Atualizar a linha existente
+                        updateRow(funcionario);
+                        alert('Funcionário atualizado com sucesso!');
+                    } else {
+                        // Adicionar uma nova linha
+                        addRow(funcionario.id, funcionario.nome, funcionario.cpf, funcionario.telefone, funcionario.endereco, funcionario.cargo);
+                        alert('Funcionário adicionado com sucesso!');
+                    }
+                    closeModal();
+                })
+                .catch(error => {
+                    alert('Erro ao salvar funcionário: ' + error.message);
+                });
+        }
+        
+        // Excluir um funcionário
+        function deleteEmployee(id, btn) {
+            fetch(`${API_URL}${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Token ${TOKEN}`,
+                },
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+                    // Remover a linha da tabela
+                    const row = btn.parentElement.parentElement;
+                    row.remove();
+                    alert('Funcionário excluído com sucesso!');
+                })
+                .catch(error => {
+                    alert('Erro ao excluir funcionário: ' + error.message);
+                });
+        }
+        
+        // Editar um funcionário (abrir modal com dados preenchidos)
+        function editEmployee(id, btn) {
+            const row = btn.parentElement.parentElement;
+            const employee = {
+                id: id,
+                nome: row.children[1].textContent,
+                cpf: row.children[2].textContent,
+                telefone: row.children[3].textContent,
+                endereco: row.children[4].textContent,
+                cargo: row.children[5].textContent,
+            };
+            openModal(employee);
+        }
+        
+        // Adicionar uma linha na tabela
+        function addRow(id, name, cpf, phone, address, role) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${id}</td>
+                <td>${name}</td>
+                <td>${cpf}</td>
+                <td>${phone}</td>
+                <td>${address}</td>
+                <td>${role}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editEmployee(${id}, this)">Editar</button>
+                    <button class="btn btn-delete" onclick="deleteEmployee(${id}, this)">Excluir</button>
+                </td>
+            `;
+            employeeTable.appendChild(row);
+        }
+        
+        // Atualizar uma linha existente
+        function updateRow(funcionario) {
+            const rows = employeeTable.children;
+            for (const row of rows) {
+                if (row.children[0].textContent == funcionario.id) {
+                    row.children[1].textContent = funcionario.nome;
+                    row.children[2].textContent = funcionario.cpf;
+                    row.children[3].textContent = funcionario.telefone;
+                    row.children[4].textContent = funcionario.endereco;
+                    row.children[5].textContent = funcionario.cargo;
+                    break;
+                }
+            }
+        }
+        
+        // Carregar os funcionários ao carregar a página
+        window.onload = () => {
+            fetch(API_URL, {
+                headers: {
+                    'Authorization': `Token ${TOKEN}`,
+                },
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    data.forEach(funcionario => {
+                        addRow(funcionario.id, funcionario.nome, funcionario.cpf, funcionario.telefone, funcionario.endereco, funcionario.cargo);
+                    });
+                })
+                .catch(error => console.error('Erro ao carregar os funcionários:', error));
+        };
+                
+    </script>
+</body>
+</html>

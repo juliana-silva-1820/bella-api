@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Fornecedores</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: hsl(284, 26%, 83%);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.753);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        form div {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid hsl(187, 84%, 53%);
+            border-radius: 4px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: hwb(320 3% 0%);
+            color: hwb(0 100% 0%);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: hwb(320 3% 0%);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table th, table td {
+            border: 1px solid hsl(187, 87%, 40%);
+            padding: 10px;
+            text-align: center;
+        }
+
+        table th {
+            background-color: #77e1e9;
+        }
+
+        .actions button {
+            margin: 0 5px;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .actions .edit {
+            background-color: hwb(320 3% 0%);
+            color: white;
+            
+            
+        }
+
+        .actions .delete {
+            background-color: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gestão de Fornecedores</h1>
+        <form id="fornecedorForm">
+            <input type="hidden" id="fornecedorId">
+            <div>
+                <label for="nome">Nome:</label>
+                <input type="text" id="nome" placeholder="Nome do fornecedor" required>
+            </div>
+            <div>
+                <label for="telefone">Telefone:</label>
+                <input type="text" id="telefone" placeholder="Telefone do fornecedor" required>
+            </div>
+            <div>
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="Email do fornecedor" required>
+            </div>
+            <button type="submit">Salvar</button>
+        </form>
+
+        <table id="fornecedoresTable">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Email</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api/fornecedores/';
+        const TOKEN = 'a2876b5903f94c6932392172bbcb06339da2c8f9';
+
+        const form = document.getElementById('fornecedorForm');
+        const tabela = document.getElementById('fornecedoresTable').querySelector('tbody');
+        let fornecedores = [];
+
+        // Carrega os fornecedores ao abrir a página
+        document.addEventListener('DOMContentLoaded', carregarFornecedores);
+
+        async function carregarFornecedores() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Erro ao carregar fornecedores');
+                fornecedores = await response.json();
+                atualizarTabela();
+            } catch (error) {
+                console.error('Erro ao carregar fornecedores:', error);
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('fornecedorId').value;
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const email = document.getElementById('email').value;
+
+            const fornecedor = { nome, telefone, email };
+
+            try {
+                let response;
+                if (id) {
+                    // Atualizar fornecedor
+                    response = await fetch(`${API_URL}${id}/`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(fornecedor),
+                    });
+                } else {
+                    // Criar fornecedor
+                    response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(fornecedor),
+                    });
+                }
+
+                if (!response.ok) throw new Error('Erro ao salvar fornecedor');
+                carregarFornecedores();
+                form.reset();
+            } catch (error) {
+                console.error('Erro ao salvar fornecedor:', error);
+            }
+        });
+
+        function atualizarTabela() {
+            tabela.innerHTML = '';
+            fornecedores.forEach(fornecedor => {
+                const row = tabela.insertRow();
+                row.innerHTML = `
+                    <td>${fornecedor.nome}</td>
+                    <td>${fornecedor.telefone}</td>
+                    <td>${fornecedor.email}</td>
+                    <td class="actions">
+                        <button class="edit" onclick="editarFornecedor(${fornecedor.id})">Editar</button>
+                        <button class="delete" onclick="deletarFornecedor(${fornecedor.id})">Deletar</button>
+                    </td>
+                `;
+            });
+        }
+
+        function editarFornecedor(id) {
+            const fornecedor = fornecedores.find(f => f.id === id);
+            document.getElementById('fornecedorId').value = fornecedor.id;
+            document.getElementById('nome').value = fornecedor.nome;
+            document.getElementById('telefone').value = fornecedor.telefone;
+            document.getElementById('email').value = fornecedor.email;
+        }
+
+        async function deletarFornecedor(id) {
+            try {
+                const response = await fetch(`${API_URL}${id}/`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Erro ao excluir fornecedor');
+                carregarFornecedores();
+            } catch (error) {
+                console.error('Erro ao excluir fornecedor:', error);
+            }
+        }
+    </script>
+</body>
+</html>

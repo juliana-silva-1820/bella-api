@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bella Clínica de Estética - Cadastro de Clientes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background-color: #87ceeb; /* Azul claro */
+      color: #fff;
+      text-align: center;
+      padding: 20px 0;
+    }
+    .header h1 {
+      margin: 0;
+    }
+    .container {
+      padding: 20px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      color: #fff;
+      background-color: #ff99cc; /* Rosa claro */
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #ff85b2;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .modal-content h2 {
+      margin-top: 0;
+      color: #ff99cc;
+    }
+    .modal-content label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .modal-content .btn-group {
+      margin-top: 20px;
+      text-align: right;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .table th, .table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .table th {
+      background-color: #87ceeb;
+      color: #fff;
+    }
+    .message {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .message.success {
+      background-color: #4CAF50; /* Verde */
+    }
+    .message.error {
+      background-color: #f44336; /* Vermelho */
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Cadastro de Clientes - Bella Clínica de Estética</h1>
+  </div>
+
+  <div class="container">
+    <button class="btn" onclick="openModal()">Novo Cliente</button>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Endereço</th>
+          <th>Telefone</th>
+          <th>Contato Emergência</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="clientTable">
+        <!-- Dados virão da API -->
+      </tbody>
+    </table>
+  </div>
+
+  <div class="modal" id="clientModal">
+    <div class="modal-content">
+      <h2>Cadastrar Cliente</h2>
+      <label for="name">Nome:</label>
+      <input type="text" id="name">
+      <label for="cpf">CPF:</label>
+      <input type="text" id="cpf">
+      <label for="address">Endereço:</label>
+      <input type="text" id="address">
+      <label for="phone">Telefone:</label>
+      <input type="text" id="phone">
+      <label for="emergencyContact">Contato de Emergência:</label>
+      <input type="text" id="emergencyContact">
+      <div class="btn-group">
+        <button class="btn" onclick="saveClient()">Salvar</button>
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://127.0.0.1:8000/api/clientes/';
+    const modal = document.getElementById('clientModal');
+    const clientTable = document.getElementById('clientTable');
+    let editClientId = null;
+
+    async function loadClients() {
+      try {
+        const response = await fetch(API_URL);
+        const clients = await response.json();
+        clientTable.innerHTML = '';
+        clients.forEach(client => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${client.nome}</td>
+            <td>${client.cpf}</td>
+            <td>${client.endereco}</td>
+            <td>${client.telefone}</td>
+            <td>${client.contato_emergencia}</td>
+            <td>
+              <button class="btn" onclick="editClient(${client.id})">Editar</button>
+              <button class="btn" onclick="deleteClient(${client.id})">Excluir</button>
+            </td>
+          `;
+          clientTable.appendChild(row);
+        });
+      } catch (error) {
+        showMessage('Erro ao carregar clientes.', 'error');
+      }
+    }
+
+    function openModal() {
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      clearForm();
+    }
+
+    function clearForm() {
+      document.getElementById('name').value = '';
+      document.getElementById('cpf').value = '';
+      document.getElementById('address').value = '';
+      document.getElementById('phone').value = '';
+      document.getElementById('emergencyContact').value = '';
+      editClientId = null;
+    }
+
+    function validateForm() {
+      const name = document.getElementById('name').value.trim();
+      const cpf = document.getElementById('cpf').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      if (!name || !cpf || !phone) {
+        showMessage('Por favor, preencha os campos obrigatórios.', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    async function saveClient() {
+      if (!validateForm()) return;
+      const clientData = {
+        nome: document.getElementById('name').value.trim(),
+        cpf: document.getElementById('cpf').value.trim(),
+        endereco: document.getElementById('address').value.trim(),
+        telefone: document.getElementById('phone').value.trim(),
+        contato_emergencia: document.getElementById('emergencyContact').value.trim(),
+      };
+      try {
+        const method = editClientId ? 'PUT' : 'POST';
+        const url = editClientId ? `${API_URL}${editClientId}/` : API_URL;
+        await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clientData),
+        });
+        showMessage('Cliente salvo com sucesso!', 'success');
+        closeModal();
+        loadClients();
+      } catch (error) {
+        showMessage('Erro ao salvar cliente.', 'error');
+      }
+    }
+
+    async function editClient(id) {
+      try {
+        const response = await fetch(`${API_URL}${id}/`);
+        const client = await response.json();
+        document.getElementById('name').value = client.nome;
+        document.getElementById('cpf').value = client.cpf;
+        document.getElementById('address').value = client.endereco;
+        document.getElementById('phone').value = client.telefone;
+        document.getElementById('emergencyContact').value = client.contato_emergencia;
+        editClientId = id;
+        openModal();
+      } catch (error) {
+        showMessage('Erro ao carregar cliente para edição.', 'error');
+      }
+    }
+
+    async function deleteClient(id) {
+      try {
+        await fetch(`${API_URL}${id}/`, { method: 'DELETE' });
+        showMessage('Cliente excluído com sucesso!', 'success');
+        loadClients();
+      } catch (error) {
+        showMessage('Erro ao excluir cliente.', 'error');
+      }
+    }
+
+    function showMessage(message, type) {
+      const msgDiv = document.createElement('div');
+      msgDiv.innerText = message;
+      msgDiv.className = `message ${type}`;
+      document.body.appendChild(msgDiv);
+      setTimeout(() => msgDiv.remove(), 3000);
+    }
+
+    loadClients();
+  </script>
+</body>
+</html>

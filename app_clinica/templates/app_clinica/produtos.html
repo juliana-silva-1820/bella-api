@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Produtos</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #d9c8e2;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 30px;
+      background-color: #f9f9f9;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    input {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #ff4da6;
+      color: white;
+      font-size: 16px;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #e63996;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #8de1e6;
+    }
+
+    td {
+      background-color: #e0f7fa;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .delete-btn:hover {
+      background-color: #c82333;
+    }
+  </style>
+
+
+
+</head>
+<body>
+    <div class="container">
+      <h1>Gestão de Produtos</h1>
+      <input type="text" id="productName" placeholder="Nome do Produto">
+      <input type="number" id="productPrice" placeholder="Preço (R$)">
+      <button onclick="addOrUpdateProduct()">Salvar Produto</button>
+  
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Preço (R$)</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="productTable">
+          <!-- Dados dinâmicos serão inseridos aqui -->
+        </tbody>
+      </table>
+    </div>
+   
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api/produtos/'; // URL da API
+        const TOKEN = 'a2876b5903f94c6932392172bbcb06339da2c8f9'; // Token de autenticação
+      
+        let editId = null;
+      
+        async function fetchProducts() {
+          try {
+            const response = await fetch(API_URL, {
+              headers: {
+                'Authorization': `Token ${TOKEN}`, // Adiciona o token nos cabeçalhos
+              },
+            });
+      
+            if (!response.ok) {
+              throw new Error(`Erro ao buscar produtos: ${response.statusText}`);
+            }
+      
+            const data = await response.json();
+            renderTable(data);
+          } catch (error) {
+            console.error("Erro ao buscar produtos:", error);
+          }
+        }
+      
+        async function addOrUpdateProduct() {
+          const name = document.getElementById("productName").value;
+          const price = document.getElementById("productPrice").value;
+      
+          if (name === "" || price === "") {
+            alert("Preencha todos os campos!");
+            return;
+          }
+      
+          const product = { name, price: parseFloat(price.replace(',', '.')) }; // Converte vírgula para ponto
+      
+          try {
+            if (editId === null) {
+              // Adiciona novo produto
+              await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Token ${TOKEN}`,
+                },
+                body: JSON.stringify(product),
+              });
+            } else {
+              // Atualiza produto existente
+              await fetch(`${API_URL}${editId}/`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Token ${TOKEN}`,
+                },
+                body: JSON.stringify(product),
+              });
+              editId = null;
+            }
+      
+            document.getElementById("productName").value = "";
+            document.getElementById("productPrice").value = "";
+            fetchProducts();
+          } catch (error) {
+            console.error("Erro ao salvar produto:", error);
+          }
+        }
+      
+        function renderTable(products) {
+          const tableBody = document.getElementById("productTable");
+          tableBody.innerHTML = ""; // Limpa a tabela
+      
+          products.forEach(product => {
+            const row = `
+              <tr>
+                <td>${product.name}</td>
+                <td>${parseFloat(product.price).toFixed(2).replace('.', ',')}</td>
+                <td>
+                  <button onclick="editProduct(${product.id}, '${product.name}', ${product.price})">Editar</button>
+                  <button class="delete-btn" onclick="deleteProduct(${product.id})">Deletar</button>
+                </td>
+              </tr>
+            `;
+            tableBody.innerHTML += row;
+          });
+        }
+      
+        async function deleteProduct(id) {
+          try {
+            await fetch(`${API_URL}${id}/`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Token ${TOKEN}`,
+              },
+            });
+            fetchProducts();
+          } catch (error) {
+            console.error("Erro ao deletar produto:", error);
+          }
+        }
+      
+        function editProduct(id, name, price) {
+          document.getElementById("productName").value = name;
+          document.getElementById("productPrice").value = price.toString().replace('.', ',');
+          editId = id;
+        }
+      
+        // Carrega os produtos ao iniciar a página
+        fetchProducts();
+      </script>
+            
+
+</body>
+</html>
